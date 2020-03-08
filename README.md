@@ -10,4 +10,4 @@ The folders are:
 
 * [`article/`](article) contains the latex files and figures for the accompanying paper
 * [`code/`](code) contains the original SAS code in a single commit, followed by the updated and new code
-
+* [`R/`](R) is not part of the replication of the original results, but shows how to run the "combined" analysis using the [season](https://cran.r-project.org/web/packages/season/index.html) package in R
