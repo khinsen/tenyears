@@ -2,8 +2,12 @@
 
 My entry for the [ten year reproducibility challenge](https://github.com/ReScience/ten-years).
 
-The original paper is [here](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.1927) (not Open Access). 
+The original paper (Barnett and Dobson, "Estimating trends and seasonality in coronary heart disease", _Statistics in Medicine_ 2004) is [here](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.1927) (not Open Access). 
 
 My original SAS code is available [here](https://www.thl.fi/publications/monica/chd_seasonal/appendix.htm) (accessed 27 January 2020).
 
-[![DOI](https://zenodo.org/badge/236288641.svg)](https://zenodo.org/badge/latestdoi/236288641)
+The folders are:
+
+* [`article/`](article) contains the latex files and figures for the accompanying paper
+* [`code/`](code) contains the original SAS code in a single commit, followed by the updated and new code
+
