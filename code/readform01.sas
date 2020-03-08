@@ -11,14 +11,14 @@
 
 * Cross-checked with CD - Distributions of the data of form 01 - Coronary events;
 
-libname data "U:\SAS\data";
-%include "U:\SAS\formats.sas";
+libname data "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\data";
+%include "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\formats.sas";
 options nodate mprint nosymbolgen font=swiss;
 footnote1(&sysdate., &systime.);
 
 * Just read in needed data for now (i.e. date/time centre gender survive history);
 data work.read;
-   infile "D:\data\form01.txt" missover; *<- read directly from CD 'The MONICA archive';
+   infile "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\data\form01.txt" missover; *<- read directly from CD 'The MONICA archive';
    input FORM 1-2 VERSN 3 CENTRE 4-5 RUNIT 6-7 SERIAL 8-14 DREG $ 15-22 SEX 23 MBIRTH $ 24-31 DONSET $ 32-39 MANAGE 40 
          SURVIV 41 SYMPT 42 ECG 43 ENZ 44 NECSUM 45 DIACAT 46 IATRO 47 NUMECG 48 CLIND1 $ 49-52 CLIND2 $ 53-56 CLIND3 $ 57-60
          PREMI 61 ESTST 70 NECP 77 HISTIHD 90 ICDVER 91;

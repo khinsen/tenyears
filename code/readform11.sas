@@ -9,15 +9,15 @@
 /*                                                              */
 /****************************************************************/
 
-libname data "U:\SAS\data";
-%include "U:\SAS\formats.sas";
+libname data "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\data";
+%include "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\formats.sas";
 options nodate mprint nosymbolgen font=swiss;
 footnote1(&sysdate., &systime.);
 
 ** Read in form11 (demographic) data;
 * Age 65 & Age70 as a character as they are sometime missing;
 data work.demg(drop=age65x age70x form versn oform oversion infosour sigdate inhabit);
-   infile "D:\data\form11.txt" missover; *<- read directly from CD 'The MONICA archive';
+   infile "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\data\form11.txt" missover; *<- read directly from CD 'The MONICA archive';
    input form 1-2 versn 3 centre 4-5 runit 6-7 year 8-11 sex 12 oform $ 13-14
       oversion 15 age25 16-21 age30 22-27 age35 28-33 age40 34-39 age45 40-45 
       age50 46-51 age55 52-57 age60 58-63 age65x $ 64-69 age70x $ 70-75 inhabit 76-82

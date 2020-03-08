@@ -1,48 +1,4 @@
-/****************************************************************/
-/*    NAME: kalsmooth.sas                                       */
-/*   TITLE: Kalman smoother of CHD rates                        */
-/*                                                              */
-/*   PROCS: IML, GPLOT                                          */
-/*    DATA: MONICA (data.all)                                   */
-/*  AUTHOR: AGB                                                 */
-/*                                                              */
-/*  Removed reference to runit for weather analysis             */
-/****************************************************************/
-
-*libname alc 'C:\My Documents\Yingqin\Monica Yingqin\coronary';
-libname data 'U:\SAS\data';
-%include "U:\SAS\formats.sas";
-options nodate mprint symbolgen notes;
-footnote1 &sysdate., &systime.;
-
-** Set up data;
-* Special data set for weather analysis;
-data work.weath;
-   set data.summonth;
-* Change Finnish centres, for weather analysis;
-   if centre=20 and runit=2 then centre=20.2;
-   if centre=20 and runit=3 then centre=20.3;
-   if centre=20 and runit=6 then centre=20.6;
-run;
-data work.addtime;
-   set work.weath;
-   retain time 0;
-   by centre; 
-   if first.centre then time=0;
-   time=time+1;
-run;
-
-** Dummy data sets;
-* Create a data set of the residuals for all centres;
-data work.allfilt;
-   centre=0; /*runit=0;*/ data=0; yrmon=0; errs=0; trend=0; p2_5=0; p97_5=0; * changed for weather analysis;
-run;
-* Create a data set of the sigma estimates;
-data work.allsig;
-   centre=0; /*runit=0;*/ mean=0; std=0; diff=0;* changed for weather analysis;
-run;
-
-* Macro to run Kalman filter;
+* Macro to run Kalman filter for trend only without seasonal patterns;
 %macro kalfil(tauratio,run);
 * Forward sweep of Kalman filter;
 proc iml;
@@ -161,7 +117,7 @@ run;
 * Get initial values for sigma;
 data work.centre;
    set work.addtime;
-   if centre=&cent.;* and runit=&repunit.; * Excluded runit to combine results for weather analysis;
+   if centre=&cent. and runit=&repunit.; 
    yrmon=yronset-1900+((mthonset-1)/12);
 *   ratestd=log(ratestd); * Examine log rates;
 run;
@@ -176,7 +132,7 @@ run;
 data work.allsmooth;
    time=0; run=0; data=0; alpha_j=0; alpha_j2=0; yrmon=0;
 run;
-%do count=1 %to 500; *<-number of MCMC runs;
+%do count=1 %to 5000; *<-number of MCMC runs;
    %kalfil(&taurat.,&count.); *< tau ratio;
    proc append base=work.sigch data=work.sigma;
    run;
@@ -189,12 +145,12 @@ run;
 title3 sigma mean and s.d.;
 data work.burn;
    set work.sigch;
-   if run>100; *burn-in;
+   if run > 500; *burn-in;
    centre=&cent.;
-*   runit=&repunit.;
+   runit=&repunit.;
 run;
 proc univariate data=work.burn noprint;
-   by centre;* runit;* changed for weather analysis;
+   by centre runit;
    var sigma;
    output out=work.sigstat std=std mean=mean;
 run;
@@ -204,15 +160,15 @@ run;
 ** Plot;
 data work.burnsm;
    set work.allsmooth;
-   if run>100; *burn-in;
+   if run > 500; *burn-in;
    centre=&cent.;
-*   runit=&repunit.;* changed for weather analysis;
+   runit=&repunit.;
 run;
 * Get the MCMC based limits;
 proc sort data=work.burnsm;
-   by centre /*runit*/ yrmon;* changed for weather analysis;
+   by centre runit yrmon;
 proc univariate data=work.burnsm noprint;
-   by centre /*runit*/ yrmon;* changed for weather analysis;
+   by centre runit yrmon;
    var alpha_j;
    output out=work.smlimits pctlpre=p pctlpts=(2.5 97.5) mean=trend;
 run;
@@ -231,7 +187,7 @@ symbol2 i=join value=NONE color=black line=2;
 symbol3 i=join value=NONE color=dagray; 
 axis1 minor=NONE label=NONE;
 axis2 minor=NONE label=NONE;
-*%cntrname(&cent.,&repunit.);
+%cntrname(&cent.,&repunit.);
 proc gplot data=work.res;
    plot trend*yrmon=1 p2_5*yrmon=2 p97_5*yrmon=2 data*yrmon=3 / overlay haxis=axis1 vaxis=axis2 noframe;
 run; quit;
@@ -240,160 +196,4 @@ proc append base=work.allfilt data=work.res;
 run;
 * Make overall file of sigma values; 
 %mend runfil;
-*%runfil(12,-99,200);
 
-options nonotes nomprint nosymbolgen; *<-reduce output to log;
-* Just call those centres needed by the weather analysis;
-%runfil(10,-99,200); %runfil(11,-99,200); %runfil(12,-99,200); %runfil(15,-99,200); %runfil(17,-99,200); 
-%runfil(18,-99,200); %runfil(20.2,-99,200); %runfil(20.3,-99,200); %runfil(20.6,-99,200);
-%runfil(23,-99,200); %runfil(24,-99,200); %runfil(26,-99,200); %runfil(28,-99,200); 
-%runfil(32,-99,200); %runfil(34,-99,200); %runfil(37,-99,200); %runfil(39,-99,200); 
-%runfil(40,-99,200); %runfil(43,-99,200); 
-%runfil(45,-99,200); %runfil(46,-99,200); %runfil(47,-99,200); %runfil(49,-99,200); %runfil(50,-99,200);
-%runfil(54,-99,200); %runfil(55,-99,200); %runfil(57,-99,200); %runfil(60,-99,200);
-*%callcent(runfil,200); *<- tau ratio;
-*%callcenf(runfil,200); *<- tau ratio, women only;
-options notes mprint;
-* Remove dummy data;
-data data.alltrendweather; * For ..\Weather\ analysis;
-   set work.allfilt;
-   if centre>0;
-run;
-proc sort data=data.alltrendweather;
-   by centre yrmon;
-run;
-data work.allsig;
-   set work.allsig;
-   if centre>0;
-run;
-
-* Plot of noise variances against means;
-proc univariate data=work.addtime noprint;
-   by centre;* runit; * changed for weather analysis;
-   var ratestd;
-   output out=work.means mean=mean var=var std=std;
-run;
-data work.toplot;
-   merge work.means work.allsig(rename=(mean=sigma) drop=std);
-   by centre; * runit;* changed for weather analysis;
-   sigma2=sigma**2;
-   rootmean=sqrt(mean);
-run;
-goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) border;
-filename graph1 "C:\My documents\Adrian\plots\sigmean_res.eps";
-goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) border gunit=pct noborder
-    gsfname=graph1 noprompt gsfmode=replace device=PSLEPSFC;
-symbol1 i=NONE color=blue value=PLUS h=3;
-symbol2 i=RQ0 line=2 color=black value=NONE width=1; * Line to show ideal Poisson distribution;
-symbol3 i=RL0 line=2 color=red value=NONE width=1; * Regression Line;
-axis1 label=('Mean') minor=NONE;
-*axis2 label=(a=90 'Observed standard deviation') minor=NONE order=(0 to 20 by 5);
-*axis2 label=(a=90 'Observed variance') minor=NONE order=(0 to 400 by 100);
-*axis2 label=(a=90 'Estimated residual variance') minor=NONE order=(0 to 250 by 50);
-axis2 label=(a=90 'Estimated residual standard deviation') minor=NONE order=(0 to 15 by 5);
-proc gplot data=work.toplot;
-   plot sigma*mean=1 rootmean*mean=2 sigma*mean=3 / overlay haxis=axis1 vaxis=axis2 noframe;
-*   plot std*mean=1 rootmean*mean=2 std*mean=3 / overlay haxis=axis1 vaxis=axis2 noframe;
-run; quit;
-proc corr data=work.toplot;
-   var sigma mean;
-run; 
-
-* Overall plot of all trends (split by trend direction);
-*goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) border;
-data work.up work.down;
-   set work.alltime;
-   length cid $ 7.;
-   if centre>0;
-   cid='a_'||trim(left(centre))||'_'||trim(left(runit));
-   if diff<0 then output work.down;
-   else if diff>0 then output work.up;
-run;
-proc transpose data=work.up out=work.uptran;
-   by centre runit yrmon;
-   var alpha_j;
-   id cid;
-run;
-goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) border;
-*filename graph1 "C:\My documents\Adrian\plots\koverup.eps";
-*goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) border gunit=pct noborder
-    gsfname=graph1 noprompt gsfmode=replace device=PSLEPSFC;
-symbol1 i=join color=blue;
-symbol2 i=join color=red;
-* Macro variables for x-axis range;
-proc means data=work.uptran min max noprint;
-   var yrmon;
-   output out=work.dates min=minyr max=maxyr;
-run;
-data _null_;
-   set work.dates;
-   maxmax=95;
-   call symput('minyear',put(minyr,4.));
-   call symput('maxyear',put(maxmax,4.));
-run;
-* Macro variables for y-axis range;
-proc means data=work.yaxismax max noprint;
-   var maxy;
-   output out=rates max=max;
-run;
-data _null_;
-   set work.rates;
-   upper=10*ceil(max/10);*<- round up to nearest 10;
-   call symput('maxyax',put(upper,4.));
-run;
-axis1 minor=NONE label=NONE order=(&minyear. to &maxyear.);
-axis2 order=(0 to &maxyax. by 10) minor=NONE label=(angle=90 'Estimated CHD trend');
-axis2 minor=NONE label=(angle=90 'Estimated CHD trend');
-* Ignore missing errors in log;
-proc gplot data=work.uptran;
-   plot a_18_99*yrmon=2 a_23_99*yrmon=2 a_24_99*yrmon=2 a_26_99*yrmon=2 a_32_99*yrmon=2
-        a_35_99*yrmon=2 a_36_99*yrmon=2 a_39_3*yrmon=2 a_45_1*yrmon=2 a_47_97*yrmon=2 
-        a_47_98*yrmon=2 a_49_1*yrmon=2 a_55_1*yrmon=2 / overlay haxis=axis1 vaxis=axis2;
-run; quit;
-** Downward trend;
-filename graph1 "C:\My documents\Adrian\plots\koverdown.eps";
-proc transpose data=work.down out=work.downtran;
-   by centre runit yrmon;
-   var alpha_j;
-   id cid;
-run;
-* Ignore missing errors in log;
-proc gplot data=work.downtran;
-   plot a_10_99*yrmon=1 a_11_99*yrmon=1 a_12_1*yrmon=1 a_15_1*yrmon=1  
-        a_19_1*yrmon=1 a_20_2*yrmon=1 a_20_3*yrmon=1 a_20_6*yrmon=1 a_28_99*yrmon=1 a_33_1*yrmon=1
-        a_34_1*yrmon=1 a_37_1*yrmon=1 a_40_1*yrmon=1 a_43_99*yrmon=1 a_46_97*yrmon=1 
-        a_54_1*yrmon=1 a_59_1*yrmon=1 a_60_99*yrmon=1 / overlay haxis=axis1 vaxis=axis2; * Women;
-*   plot a_10_99*yrmon=1 a_11_99*yrmon=1 a_12_1*yrmon=1 a_15_1*yrmon=1  
-        a_18_99*yrmon=1 a_19_1*yrmon=1 a_20_2*yrmon=1 a_20_3*yrmon=1 a_20_6*yrmon=1 a_23_99*yrmon=1 a_24_99*yrmon=1
-        a_26_99*yrmon=1 a_28_99*yrmon=1 a_33_1*yrmon=1 a_32_99*yrmon=1 a_34_1*yrmon=1 a_37_1*yrmon=1 
-        a_40_1*yrmon=1 a_43_99*yrmon=1 a_46_97*yrmon=1 
-        a_50_1*yrmon=1 a_54_1*yrmon=1 a_55_1*yrmon=1 
-        a_57_1*yrmon=1 a_59_1*yrmon=1 a_60_99*yrmon=1 / overlay haxis=axis1 vaxis=axis2;
-run; quit;
-
-* Save as a permanent data set;
-data data.temp; 
-   set work.alltime; 
-   if centre>0;
-run;
-
-/**
-proc transpose data=work.down out=work.downtran;
-   by centre runit yrmon;
-   var alpha_j2;
-   id cid;
-run;
-* Ignore missing errors in log;
-goptions reset=all;
-axis1 minor=NONE label=NONE order=(&minyear. to &maxyear.);
-axis2 minor=NONE label=(angle=90 'Estimated CHD trend');
-symbol1 i=sm20 color=blue; *<-smooth line;
-proc gplot data=work.downtran;
-   plot a_10_99*yrmon=1 a_11_99*yrmon=1 a_12_1*yrmon=1 a_12_2*yrmon=1 a_15_1*yrmon=1 a_17_1*yrmon=1 
-        a_18_99*yrmon=1 a_19_1*yrmon=1 a_20_2*yrmon=1 a_20_3*yrmon=1 a_20_6*yrmon=1 a_23_99*yrmon=1 a_24_99*yrmon=1
-        a_26_99*yrmon=1 a_28_99*yrmon=1 a_33_1*yrmon=1 a_32_99*yrmon=1 a_34_1*yrmon=1 a_37_1*yrmon=1 
-        a_40_1*yrmon=1 a_43_99*yrmon=1 a_46_97*yrmon=1 
-        a_47_97*yrmon=1 a_50_1*yrmon=1 a_54_1*yrmon=1 a_55_1*yrmon=1 
-        a_57_1*yrmon=1 a_59_1*yrmon=1 a_60_99*yrmon=1 / overlay haxis=axis1 vaxis=axis2;
-run; quit;
-**/

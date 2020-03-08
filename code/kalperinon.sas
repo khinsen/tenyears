@@ -2,53 +2,50 @@
 /*    NAME: kalperinon.sas                                      */
 /*   TITLE: Remove trend from rates with Kalman filter then     */
 /*          apply the periodogram with truncating or tapering   */
+/*          (two-stage approach)                                */
 /*                                                              */
 /*   PROCS: GPLOT, SPECTRA, IML                                 */
-/*    DATA: MONICA (data.all)                                   */
+/*    DATA: MONICA (data.malerate)                              */
 /*  AUTHOR: AGB                                                 */
-/*    DATE: 2/5/02                                              */
+/*    DATE: 3/Feb/2020                                          */
 /*    USES: kalsmooth.sas                                       */
 /*                                                              */
 /****************************************************************/
 
-libname data 'U:\SAS\data';
-%include "U:\SAS\formats.sas";
-%include "U:\SAS\fkappas.sas"; * Include spectral test program;
-options nodate mprint symbolgen font='swiss' notes;
+libname data "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\data";
+%let library=U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files; * Change this library to match your file structure. Make sure the three files called in the next three lines are put there;
+%inc "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\formats.sas"; * ;
+%inc "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\fkappas.sas"; * Include spectral test program;
+%inc "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\updated_files\kalsmooth.sas"; * Macros to estimate smooth trend;
+%inc "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\original_files\ingamrnd.sas"; * Macros to estimate smooth trend;
+options nodate mprint symbolgen notes;
 footnote1 &sysdate., &systime.;
 
 ** Set up data;
-data work.gate(rename=(year=yronset));
-*   set data.malerate;
-*   if event='fatal';
-*   set data.magespl;
-*   if agex=2;
-   set data.sumevent;
-   if sex=1;
+* Combine fatal and non-fatal event rate for men;
+proc summary data=data.malerate nway;
+   class centre runit year mthonset;
+   var ratestd; 
+   output out=work.sumevent(drop=_type_ _freq_) sum=ratestd;
 run;
-data work.addtime;
-   set work.gate;
+data work.addtime(rename=(year=yronset)); * Add simple equally spaced time index;
+   set work.sumevent;
    retain time 0;
    by centre runit;
    if first.runit then time=0;
    time=time+1;
 run;
 
-** Filter data - use kalsmooth.sas program to create work.allfilt;
-%include "U:\SAS\kalsmooth.sas";
+* Fit non-linear trend using Kalman filter;
+options nonotes nomprint nosymbolgen; *<-reduce output to log;
+%runfil(cent=10, repunit=99, taurat=300); * smaller tau ratio gives more flexible trend;
+options notes mprint symbolgen; *<-return output to log;
 
-* Add time;
-data work.addtime;
-   set data.malefilt(drop=time);
-   by centre runit;
-   retain time 0;
-   if first.runit then time=0;
-   time=time+1;
-run;
+
 goptions reset=all;
 %macro perisers(cent,repunit,var);
 data work.centre;
-   set work.addtime; 
+   set work.res; * Use residuals from smooth above; 
    if centre=&cent. and runit in (&repunit.); 
 run;
 proc spectra data=work.centre out=work.peri p adjmean;
@@ -96,7 +93,7 @@ proc iml;
    append from toout;
 quit;
 *goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) border;
-filename graph1 "C:\My documents\Adrian\plots\sp&cent._&repunit..eps";
+filename graph1 "U:\Research\Projects\ihbi\aushsi\aushsi_barnetta\meta.research\reproducibility.challenge\updated_files\plots\sp&cent._&repunit..eps";
 goptions reset=all ftext=centxi htext=3 gunit=pct colors=(black) gunit=pct noborder
     gsfname=graph1 noprompt gsfmode=replace device=PSLEPSF fontres=presentation dash;
 symbol1 i=join color=grey value=NONE line=1;
@@ -105,7 +102,7 @@ symbol2 i=join color=black value=NONE line=2 width=4;
 * Axes for period;
 axis1 minor=NONE label=('Period') major=(h=2.5) order=(2 to 24 by 2) value=(h=2.5); *<-period;
 axis2 minor=NONE label=(a=90 'I(f)') major=(h=2.5) value=(h=2.5); *<I(w);
-*%cntrname(&cent.,&repunit.);
+%cntrname(&cent.,&repunit.);
 title; * No title for final output;
 data work.chop;
    set work.spec;
@@ -119,7 +116,7 @@ run; quit;
 proc append base=work.allperi data=work.chop;
 run;
 %mend perisers;
-*%perisers(28,99,errs);
+%perisers(10,99,errs);
 
 * Set up dummy data;
 goptions reset=all;
@@ -134,88 +131,6 @@ data work.allperi;
    if centre~=0;
    if period>=2 and period<=24;
 run;
-* Create permanent data set for other programs;
-data data.perimale;
-   set work.allperi;
-run;
-
-* Plot mean against f=12 value;
-proc univariate data=work.gate noprint;
-   var ratestd;
-   by centre runit;
-   output out=work.means mean=mean var=var;
-run;
-data work.annual work.biannual;
-   set data.perimale;
-   if period>=5.9 and period<=6.1 then output work.biannual;
-   if period>=11.9 and period<=12.1 then output work.annual;
-run;
-*** Plot annual rate against average temp;
-data work.addw; 
-   merge work.annual(drop=freq period) work.weatherhighlow work.centnmsh;
-*   merge work.biannual(drop=freq period) work.weatherhighlow work.centnmsh;
-   by centre runit;
-   diff=avehigh-avelow;
-   if centre=47 then delete; * Remove Novosibirsk;
-   logp=log(p_01);
-run;
-%macro plotweather(var);
-goptions reset=all;
-symbol1 i=NONE color=black value=PLUS h=3;
-axis1 minor=NONE;
-* Annotate data set;
-data work.label;
-   set work.addw;
-   retain xsys '2' ysys '2' size 0.7;
-   x=&var.;
-   y=p_01;
-   position='6';
-   style='centxi';
-   text=centname;
-   h=2;
-run;
-proc gplot data=work.addw annotate=work.label;
-   plot p_01*&var.=1 / haxis=axis1 /*vaxis=axis2*/ noframe;
-run; quit;
-%mend plotweather;
-%plotweather(avelow);
-%plotweather(avehigh);
-%plotweather(diff);
-proc corr data=work.addw;
-   var p_01 logp avelow avehigh diff;
-run; quit;
-* Correlation with Kaunas and A.B.;
-data work.without;
-   set work.addw;
-   if centre in (45,57) then delete;
-run;
-proc corr data=work.without;
-   var p_01 logp avelow avehigh diff;
-run; quit;
-* Neat plot;
-data work.neatlabel;
-   set work.label;
-   size=1.1;
-   y=logp;
-   if centre=18 then text='C.R.';
-*   if centre=20 and runit=3 then position='4'; * Kuopio;
-*   if centre=20 and runit=6 then position='2'; * Turku;
-*   if centre=35 and runit=99 then position='7'; * TV;
-*   if centre=46 and runit=97 then text='Moscow #1';
-*   if centre=46 and runit=98 then text='Moscow #2';
-run;
-goptions reset=all;
-filename graph1 "C:\My documents\Adrian\plots\tempannual.eps";
-goptions reset=all ftext=centxi htext=2 gunit=pct noborder 
-    gsfname=graph1 noprompt gsfmode=replace device=PSLEPSF fontres=presentation dash;
-axis1 minor=NONE order=(5 to 35 by 5) value=('10' '15' '20' '25' '30') label=('Difference in average high and low temperatures (degrees C)');
-*axis2 minor=NONE major=(number=8) order=(0 to 17 by 1) label=(a=90 'Degree of annual seasonality') value=(' ');
-axis2 minor=NONE order=(-1.5 to 3 by 0.5) label=(a=90 'log(Degree of annual seasonality)') value=(' ' '-1' ' ' '0' ' ' '1' ' ' '2' ' ' '3');
-symbol1 value=circle color=grey h=2 i=NONE;
-proc gplot data=work.addw annotate=work.neatlabel;
-*   plot p_01*diff=1 / haxis=axis1 vaxis=axis2 noframe;
-   plot logp*diff=1 / haxis=axis1 vaxis=axis2 noframe;
-run; quit;
 
 * Table of significant frequencies;
 %macro gettotab(cent,runit);
