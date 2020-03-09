@@ -51,7 +51,7 @@ run;
 *** ANALYSIS ***;
 * Fit non-linear trend using Kalman filter without season;
 options nonotes nomprint nosymbolgen; *<-reduce output to log;
-%runfil(cent=34, repunit=1, taurat=400); * smaller tau ratio gives more flexible trend;
+%runfil(cent=34, repunit=1, taurat=900); * smaller tau ratio gives more flexible trend;
 options notes mprint symbolgen; *<-return output to log;
 data work.posterior;
   set work.res;
