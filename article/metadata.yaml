@@ -5,7 +5,7 @@
 #  - For a successful replication, it shoudl be prefixed with "[Re]"
 #  - For a failed replication, it should be prefixed with "[¬Re]"
 #  - For other article types, no instruction (but please, not too long)
-title: "ReScience (R)evolution"
+title: "[Rp] Estimating trends and seasonality in coronary heart disease"
 
 # List of authors with name, orcid number, email and affiliation
 # Affiliation "*" means contact author
@@ -13,7 +13,7 @@ authors:
   - name: Adrian Barnett
     orcid: 0000-0001-6339-0374
     email: a.barnett@qut.edu.au
-    affiliations: 1
+    affiliations: 1,*
   
 
 # List of affiliations with code (corresponding to author affiliations), name
@@ -34,18 +34,19 @@ keywords: rescience c, rescience x, SAS
 code:
   - url: https://github.com/agbarnett/tenyears
   - doi: 
+  - swh: swh:1:dir:8a85ed205c5ffda5165c68ae76433f9a1e24cae2
 
-# Date URL and DOI (optional if no data)
+# Data URL and DOI (optional if no data)
 data:
   - url:
   - doi:
 
 # Information about the original article that has been replicated
 replication:
- - cite: # Full textual citation
- - bib:  # Bibtex key (if any) in your bibliography file
- - url:  # URL to the PDF, try to link to a non-paywall version
- - doi:  # Regular digital object identifier
+ - cite: Barnett AG, Dobson AJ, For the WHO MONICA Project (2004) Estimating trends and seasonality in coronary heart disease. Statist Med 23:3505-3523
+ - bib:  Barnett2004 # Bibtex key (if any) in your bibliography file
+ - url:  https://onlinelibrary.wiley.com/doi/epdf/10.1002/sim.1927
+ - doi:  10.1002/sim.1927 # Regular digital object identifier
 
 # Don't forget to surround abstract with double quotes
 abstract: "This is a computational replication of my SAS code from 16 years ago."
@@ -58,11 +59,12 @@ bibliography: bibliography.bib
 #  * Editorial
 #  * Letter
 #  * Replication
-type: Replication
+#  * Reproduction
+type: Reproduction
 
 # Scientific domain of the article (e.g. Computational Neuroscience)
 #  (one domain only & try to be not overly specific)
-domain: 
+domain: Biology
 
 # Coding language (main one only if several)
 language: SAS
@@ -73,14 +75,14 @@ language: SAS
 
 # For example, the URL of the GitHub issue where review actually occured
 review: 
-  - url: 
+  - url: https://github.com/ReScience/submissions/issues/21
 
 contributors:
-  - name:
-    orcid: 
+  - name: Konrad Hinsen
+    orcid: 0000-0003-0330-9428
     role: editor
-  - name:
-    orcid:
+  - name: Serge Stinckwich
+    orcid: 0000-0002-8755-9848
     role: reviewer
   - name:
     orcid:
@@ -88,19 +90,19 @@ contributors:
 
 # This information will be provided by the editor
 dates:
-  - received:  November 1, 2018
-  - accepted:
-  - published: 
+  - received: March 9, 2020
+  - accepted: November 25, 2020
+  - published: November 26, 2020
 
 # This information will be provided by the editor
 article:
-  - number: # Article number will be automatically assigned during publication
-  - doi:    # DOI from Zenodo
-  - url:    # Final PDF URL (Zenodo or rescience website?)
+  - number: 18
+  - doi:    10.5281/zenodo.4290512
+  - url:    https://zenodo.org/record/4290512/files/article.pdf
 
 # This information will be provided by the editor
 journal:
   - name:   "ReScience C"
   - issn:   2430-3658
-  - volume: 4
+  - volume: 6
   - issue:  1
